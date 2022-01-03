@@ -6,7 +6,7 @@
   strategy: free
   roles:
     - geerlingguy.containerd
-    # - geerlingguy.kubernetes
+
   tasks:
     - name: "Install packages"
       ansible.builtin.yum:
@@ -72,3 +72,27 @@
         sudo sysctl --system
       args:
         executable: /bin/bash
+
+    # https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#installing-kubeadm-kubelet-and-kubectl
+    - name: "Yum Kubernetes repo"
+      ansible.builtin.shell: |
+        cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+        [kubernetes]
+        name=Kubernetes
+        baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+        enabled=1
+        gpgcheck=1
+        repo_gpgcheck=1
+        gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+        exclude=kubelet kubeadm kubectl
+        EOF
+      args:
+        executable: /bin/bash
+
+    - name: "Install Kubernetes"
+      ansible.builtin.command: "yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes"
+
+    - name: "Enable kubelet service"
+      ansible.builtin.systemd:
+        name: kubelet
+        enabled: yes

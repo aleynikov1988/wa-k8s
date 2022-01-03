@@ -4,10 +4,10 @@
 VAGRANT_API_VERSION = "2"
 
 hosts = {
-  "master" => "192.168.77.10",
-  "worker-1" => "192.168.77.11",
-  "worker-2" => "192.168.77.12",
-  "conf" => "192.168.77.13"
+  "node-master" => "192.168.77.10",
+  "node-worker1" => "192.168.77.11",
+  "node-worker2" => "192.168.77.12",
+  "node-conf" => "192.168.77.13"
 }
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
@@ -80,14 +80,15 @@ Vagrant.configure(VAGRANT_API_VERSION) do |config|
   config.ssh.insert_key = false
   config.ssh.forward_agent = true
 
+  config.vm.provider "libvirt" do |v|
+    v.memory = 2048
+    v.cpus = 2
+  end
+
   hosts.each do |name, ip|
     config.vm.define name do |node|
       node.vm.hostname = "%s" % name
       node.vm.network "private_network", ip: "%s" % ip
-      node.vm.provider "libvirt" do |v|
-        v.memory = "2048"
-        v.cpus = "2"
-      end
 
       # Up-to-date system
       # node.vm.provision "shell", inline: <<-SHELL
@@ -101,12 +102,12 @@ Vagrant.configure(VAGRANT_API_VERSION) do |config|
       SHELL
 
       # Master node
-      if name == "master"
-        node.vm.provision "file", source: "kubeadm-config.yaml", destination: "$HOME/kubernetes/configfile.yaml"
+      if name == "node-master"
+        node.vm.provision "file", source: "kubeadm-config.yaml", destination: "$HOME/kubernetes/init.yaml"
       end
 
       # Management node
-      if name == "conf"
+      if name == "node-conf"
         node.vm.provision "shell", inline: <<-SHELL
           yum install -y ansible
         SHELL
