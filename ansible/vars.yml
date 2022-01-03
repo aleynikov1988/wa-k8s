@@ -1,3 +1,6 @@
 ---
 packages:
   - nano
+  - iproute-tc
+
+kubernetes_allow_pods_on_master: true

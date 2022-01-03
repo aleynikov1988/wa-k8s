@@ -1,0 +1,12 @@
+# ansible-galaxy install -r requirements.yml
+---
+roles:
+  - name: geerlingguy.containerd
+    version: 1.2.0
+  - name: geerlingguy.kubernetes
+    version: 7.1.0
+collections:
+  - name: community.general
+    version: 4.2.0
+  - name: ansible.posix
+    version: 1.3.0

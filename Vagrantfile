@@ -1,18 +1,20 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+VAGRANT_API_VERSION = "2"
+
 hosts = {
-  "node-0" => "192.168.77.10",
-  "node-1" => "192.168.77.11",
-  "node-2" => "192.168.77.12",
-  "node-3" => "192.168.77.13"
+  "master" => "192.168.77.10",
+  "worker-1" => "192.168.77.11",
+  "worker-2" => "192.168.77.12",
+  "conf" => "192.168.77.13"
 }
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
 # you're doing.
-Vagrant.configure("2") do |config|
+Vagrant.configure(VAGRANT_API_VERSION) do |config|
   # The most common configuration options are documented and commented below.
   # For a complete reference, please see the online documentation at
   # https://docs.vagrantup.com.
@@ -88,7 +90,9 @@ Vagrant.configure("2") do |config|
       end
 
       # Up-to-date system
-      # node.vm.provision "shell", inline: "yum update -y"
+      # node.vm.provision "shell", inline: <<-SHELL
+      #   yum update -y
+      # SHELL
 
       node.vm.provision "shell", inline: <<-SHELL
         yum install -y sshpass
@@ -96,15 +100,25 @@ Vagrant.configure("2") do |config|
         systemctl restart sshd
       SHELL
 
+      # Master node
+      if name == "master"
+        node.vm.provision "file", source: "kubeadm-config.yaml", destination: "$HOME/kubernetes/configfile.yaml"
+      end
 
       # Management node
-      if name == "node-3"
-        node.vm.provision "file", source: "./ansible", destination: "$HOME/ansible"
-        node.vm.provision "shell", inline: "yum install -y ansible"
+      if name == "conf"
+        node.vm.provision "shell", inline: <<-SHELL
+          yum install -y ansible
+        SHELL
 
-        # node.vm.provision "ansible_local" do |ansible|
+        # node.vm.synced_folder "ansible/", "/vagrant", owner: "vagrant", group: "vagrant"
+        node.vm.provision "file", source: "ansible/", destination: "$HOME/ansible"
+
+        # node.vm.provision "ansible", type: 'ansible' do |ansible|
         #   ansible.playbook = "playbook.yml"
-        #   ansible.verbose = true
+        #   ansible.config_file = "ansible.cfg"
+        #   ansible.inventory_path = "hosts"
+        #   ansible.galaxy_role_file = "requirements.yml"
         # end
       end
     end
