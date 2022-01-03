@@ -112,7 +112,7 @@ Vagrant.configure(VAGRANT_API_VERSION) do |config|
           yum install -y ansible
         SHELL
 
-        # node.vm.synced_folder "ansible/", "/vagrant", owner: "vagrant", group: "vagrant"
+        # node.vm.synced_folder "ansible/", "/vagrant", type: "virtiofs"
         node.vm.provision "file", source: "ansible/", destination: "$HOME/ansible"
 
         # node.vm.provision "ansible", type: 'ansible' do |ansible|
