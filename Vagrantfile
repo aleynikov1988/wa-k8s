@@ -3,12 +3,9 @@
 
 VAGRANT_API_VERSION = "2"
 
-hosts = {
-  "node-master" => "192.168.77.10",
-  "node-worker1" => "192.168.77.11",
-  "node-worker2" => "192.168.77.12",
-  "node-conf" => "192.168.77.13"
-}
+ip_mask = "10.0.0.%02d"
+ip_octet4 = 10
+worker_cnt = 2
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -80,48 +77,65 @@ Vagrant.configure(VAGRANT_API_VERSION) do |config|
   config.ssh.insert_key = false
   config.ssh.forward_agent = true
 
-  config.vm.provider "libvirt" do |v|
-    v.memory = 2048
-    v.cpus = 2
+  config.vm.define "master" do |master|
+    master.vm.hostname = "node-master"
+    master.vm.network "private_network", ip: "#{ip_mask}" % ip_octet4
+
+    master.vm.provider "libvirt" do |libvirt|
+      libvirt.memory = 4096
+      libvirt.cpus = 2
+    end
+
+    master.vm.provision "shell", inline: <<-SHELL
+      yum install -y sshpass
+      sed -i 's/ChallengeResponseAuthentication no/ChallengeResponseAuthentication yes/#g' /etc/ssh/sshd_config
+      systemctl restart sshd
+    SHELL
+
+    # kubeadm
+    master.vm.provision "file", source: "kubeadm-config.yaml", destination: "$HOME/kubernetes/init.yaml"
   end
 
-  hosts.each do |name, ip|
-    config.vm.define name do |node|
-      node.vm.hostname = "%s" % name
-      node.vm.network "private_network", ip: "%s" % ip
+  (1..worker_cnt).each do |worker_id|
+    config.vm.define "worker-#{worker_id}" do |worker|
+      ip_octet4 = ip_octet4 + 1
+      worker.vm.hostname = "node-worker#{worker_id}"
+      worker.vm.network "private_network", ip: "#{ip_mask}" % ip_octet4
 
-      # Up-to-date system
-      # node.vm.provision "shell", inline: <<-SHELL
-      #   yum update -y
-      # SHELL
+      worker.vm.provider "libvirt" do |libvirt|
+        libvirt.memory = 2048
+        libvirt.cpus = 1
+      end
 
-      node.vm.provision "shell", inline: <<-SHELL
+      worker.vm.provision "shell", inline: <<-SHELL
         yum install -y sshpass
         sed -i 's/ChallengeResponseAuthentication no/ChallengeResponseAuthentication yes/#g' /etc/ssh/sshd_config
         systemctl restart sshd
       SHELL
-
-      # Master node
-      if name == "node-master"
-        node.vm.provision "file", source: "kubeadm-config.yaml", destination: "$HOME/kubernetes/init.yaml"
-      end
-
-      # Management node
-      if name == "node-conf"
-        node.vm.provision "shell", inline: <<-SHELL
-          yum install -y ansible
-        SHELL
-
-        # node.vm.synced_folder "ansible/", "/vagrant", type: "virtiofs"
-        node.vm.provision "file", source: "ansible/", destination: "$HOME/ansible"
-
-        # node.vm.provision "ansible", type: 'ansible' do |ansible|
-        #   ansible.playbook = "playbook.yml"
-        #   ansible.config_file = "ansible.cfg"
-        #   ansible.inventory_path = "hosts"
-        #   ansible.galaxy_role_file = "requirements.yml"
-        # end
-      end
     end
+  end
+
+  config.vm.define "conf" do |conf|
+    conf.vm.hostname = "node-conf"
+    conf.vm.network "private_network", ip: "#{ip_mask}" % '99'
+
+    conf.vm.provider "libvirt" do |libvirt|
+      libvirt.memory = 1024
+      libvirt.cpus = 1
+    end
+
+    conf.vm.provision "shell", inline: <<-SHELL
+      yum install -y ansible
+    SHELL
+
+    # node.vm.synced_folder "ansible/", "/vagrant", type: "virtiofs"
+    conf.vm.provision "file", source: "ansible/", destination: "$HOME/ansible"
+
+    # node.vm.provision "ansible", type: 'ansible' do |ansible|
+    #   ansible.playbook = "playbook.yml"
+    #   ansible.config_file = "ansible.cfg"
+    #   ansible.inventory_path = "hosts"
+    #   ansible.galaxy_role_file = "requirements.yml"
+    # end
   end
 end
