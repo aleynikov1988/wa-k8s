@@ -1,5 +1,5 @@
 ---
-- hosts: k8s
+- hosts: all
   become: true
   vars_files:
     - vars.yml
@@ -8,35 +8,35 @@
     - geerlingguy.containerd
 
   tasks:
-    - name: "Install packages"
+    - name: Install packages
       ansible.builtin.yum:
         name: "{{ item }}"
       with_items: "{{ packages }}"
 
-    - name: "Disable swap"
+    - name: Disable swap
       ansible.builtin.command: "swapoff -a"
       when: ansible_swaptotal_mb > 0
 
-    - name: "Disable Firewalld"
+    - name: Disable Firewalld
       ansible.builtin.service:
         name: firewalld
         state: stopped
 
-    - name: "Disable SELinux"
+    - name: Disable SELinux
       ansible.posix.selinux:
         state: disabled
 
-    - name: "Put SELinux in permissive mode"
+    - name: Put SELinux in permissive mode
       ansible.posix.selinux:
         policy: targeted
         state: permissive
 
-    - name: "Enable module: overlay"
+    - name: Enable module overlay
       community.general.modprobe:
         name: overlay
         state: present
 
-    - name: "Enable module: br_netfilter"
+    - name: Enable module br_netfilter
       community.general.modprobe:
         name: br_netfilter
         state: present
@@ -57,7 +57,7 @@
     #     executable: /bin/bash
 
     # https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd
-    - name: "Containerd configure prerequisites"
+    - name: Containerd configure prerequisites
       ansible.builtin.shell: |
         cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
         overlay
@@ -74,7 +74,7 @@
         executable: /bin/bash
 
     # https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#installing-kubeadm-kubelet-and-kubectl
-    - name: "Yum Kubernetes repo"
+    - name: Add Kubernetes repo
       ansible.builtin.shell: |
         cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
         [kubernetes]
@@ -89,10 +89,26 @@
       args:
         executable: /bin/bash
 
-    - name: "Install Kubernetes"
+- hosts: master
+  become: true
+
+  tasks:
+    - name: Install Kubelet Kubeadm Kubectl
       ansible.builtin.command: "yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes"
 
-    - name: "Enable kubelet service"
+    - name: Enable Kubelet service
+      ansible.builtin.systemd:
+        name: kubelet
+        enabled: yes
+
+- hosts: worker
+  become: true
+
+  tasks:
+    - name: Install Kubelet Kubeadm
+      ansible.builtin.command: "yum install -y kubelet kubeadm --disableexcludes=kubernetes"
+
+    - name: Enable Kubelet service
       ansible.builtin.systemd:
         name: kubelet
         enabled: yes

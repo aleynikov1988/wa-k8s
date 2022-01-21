@@ -82,7 +82,7 @@ Vagrant.configure(VAGRANT_API_VERSION) do |config|
     master.vm.network "private_network", ip: "#{ip_mask}" % ip_octet4
 
     master.vm.provider "libvirt" do |libvirt|
-      libvirt.memory = 4096
+      libvirt.memory = 2048
       libvirt.cpus = 2
     end
 
@@ -130,6 +130,7 @@ Vagrant.configure(VAGRANT_API_VERSION) do |config|
 
     # node.vm.synced_folder "ansible/", "/vagrant", type: "virtiofs"
     conf.vm.provision "file", source: "ansible/", destination: "$HOME/ansible"
+    conf.vm.provision "file", source: "scripts/ansible/install_req.sh", destination: "$HOME/bin/ansible_req"
 
     # node.vm.provision "ansible", type: 'ansible' do |ansible|
     #   ansible.playbook = "playbook.yml"
