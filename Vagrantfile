@@ -93,7 +93,7 @@ Vagrant.configure(VAGRANT_API_VERSION) do |config|
     SHELL
 
     # kubeadm
-    master.vm.provision "file", source: "kubeadm-config.yaml", destination: "$HOME/kubernetes/init-config.yaml"
+    master.vm.provision "file", source: "manifests", destination: "$HOME/kubernetes/manifests"
   end
 
   (1..worker_cnt).each do |worker_id|
