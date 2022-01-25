@@ -1,15 +1,16 @@
-kind: InitConfiguration
+---
 apiVersion: kubeadm.k8s.io/v1beta3
+kind: InitConfiguration
 localAPIEndpoint:
   advertiseAddress: 10.0.0.10
   bindPort: 6443
 ---
-kind: ClusterConfiguration
 apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
 networking:
-  podSubnet: "192.168.0.0/16"
+  podSubnet: "10.244.0.0/16"
 controlPlaneEndpoint: "10.0.0.10:6443"
 ---
-kind: KubeletConfiguration
 apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
 cgroupDriver: systemd
