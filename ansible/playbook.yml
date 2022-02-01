@@ -3,19 +3,12 @@
   become: true
   vars_files:
     - vars.yml
-  strategy: free
-  roles:
-    - geerlingguy.containerd
 
   tasks:
-    - name: Install packages
+    - name: Install dev packages
       ansible.builtin.yum:
         name: "{{ item }}"
-      with_items: "{{ packages }}"
-
-    - name: Disable swap
-      ansible.builtin.command: "swapoff -a"
-      when: ansible_swaptotal_mb > 0
+      with_items: "{{ dev_packages }}"
 
     - name: Disable Firewalld
       ansible.builtin.service:
@@ -30,6 +23,19 @@
       ansible.posix.selinux:
         policy: targeted
         state: permissive
+
+- hosts: master:worker
+  become: true
+  vars_files:
+    - vars.yml
+  strategy: free
+  roles:
+    - geerlingguy.containerd
+
+  tasks:
+    - name: Disable swap
+      ansible.builtin.command: "swapoff -a"
+      when: ansible_swaptotal_mb > 0
 
     - name: Enable module overlay
       community.general.modprobe:
@@ -112,3 +118,22 @@
       ansible.builtin.systemd:
         name: kubelet
         enabled: yes
+
+- hosts: lb
+  become: true
+
+  tasks:
+    - name: Install HAproxy
+      ansible.builtin.yum:
+        name: haproxy
+        state: present
+
+    - name: Configure HAproxy
+      template:
+        src: haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+
+    - name: Enable HAproxy
+      ansible.builtin.service:
+        name: haproxy
+        state: restarted

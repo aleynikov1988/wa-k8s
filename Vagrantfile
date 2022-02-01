@@ -18,7 +18,7 @@ Vagrant.configure(VAGRANT_API_VERSION) do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
-  config.vm.box = "generic/centos8"
+  config.vm.box = "generic/centos7"
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -86,11 +86,7 @@ Vagrant.configure(VAGRANT_API_VERSION) do |config|
       libvirt.cpus = 2
     end
 
-    master.vm.provision "shell", inline: <<-SHELL
-      yum install -y sshpass
-      sed -i 's/ChallengeResponseAuthentication no/ChallengeResponseAuthentication yes/#g' /etc/ssh/sshd_config
-      systemctl restart sshd
-    SHELL
+    master.vm.provision "shell", path: "scripts/vagrant/sshd_config.sh"
 
     # kubeadm
     master.vm.provision "file", source: "manifests", destination: "$HOME/kubernetes/manifests"
@@ -107,20 +103,32 @@ Vagrant.configure(VAGRANT_API_VERSION) do |config|
         libvirt.cpus = 1
       end
 
-      worker.vm.provision "shell", inline: <<-SHELL
-        yum install -y sshpass
-        sed -i 's/ChallengeResponseAuthentication no/ChallengeResponseAuthentication yes/#g' /etc/ssh/sshd_config
-        systemctl restart sshd
-      SHELL
+      worker.vm.provision "shell", path: "scripts/vagrant/sshd_config.sh"
     end
+  end
+
+  config.vm.define "lb" do |lb|
+    lb.vm.hostname = "node-lb"
+    lb.vm.network "private_network", ip: "#{ip_mask}" % '99'
+    lb.vm.hostname = "node-lb"
+
+    lb.vm.network "forwarded_port", guest: 80, host: 80
+    lb.vm.network "forwarded_port", guest: 8080, host: 8080
+
+    lb.vm.provider "libvirt" do |libvirt|
+      libvirt.memory = 512
+      libvirt.cpus = 1
+    end
+
+    lb.vm.provision "shell", path: "scripts/vagrant/sshd_config.sh"
   end
 
   config.vm.define "conf" do |conf|
     conf.vm.hostname = "node-conf"
-    conf.vm.network "private_network", ip: "#{ip_mask}" % '99'
+    conf.vm.network "private_network", ip: "#{ip_mask}" % '100'
 
     conf.vm.provider "libvirt" do |libvirt|
-      libvirt.memory = 1024
+      libvirt.memory = 512
       libvirt.cpus = 1
     end
 
