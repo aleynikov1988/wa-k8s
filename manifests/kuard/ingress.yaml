@@ -5,6 +5,10 @@ metadata:
   namespace: kuard-demo
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+      - kuard.local
+    secretName: kuard-tls
   rules:
   - host: kuard.local
     http:
